@@ -156,11 +156,11 @@ int main(int argc,char* argv[])
                 new_data = 1;
             }
 
-            if(new_data)
+            if(new_data == 1)
             {
                 SetJointPos(clientID, message.q);
 
-                // Faire avancer la simulation d'un pas (dt)
+                // Faire avancer la simulation d'un pas
                 simxSynchronousTrigger(clientID);
 
                 // Attendre que le pas soit calculé par Coppelia pour avoir des données fraîches
