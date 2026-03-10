@@ -1,0 +1,5 @@
+echo "CoppeliaSim*" >> .gitignore
+echo "*.tar" >> .gitignore
+echo "*.so*" >> .gitignore
+echo "*.png" >> .gitignore
+echo "*.csv" >> .gitignore
