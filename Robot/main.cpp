@@ -105,7 +105,6 @@ void GetJointPos(int clientID,  float *q){
 int main(int argc,char* argv[])
 {
     struct mesg message;
-    struct mesg message_temp;
     struct sockaddr_in sock;
     socklen_t longaddr;
 
@@ -116,7 +115,6 @@ int main(int argc,char* argv[])
     int commThreadCycleInMs=5;  // indicate how often data packets are sent back and forth - a default value of 5 is recommended
     int command, err;
     int results, resultr;
-    int new_data = -1;
 
     command=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
         sock.sin_family=PF_INET;
@@ -150,13 +148,7 @@ int main(int argc,char* argv[])
 
        while (1) 
        {
-            while (recvfrom(command, &message_temp, sizeof(message_temp), 0, (struct sockaddr*)&sock, &longaddr) > 0) 
-            {
-                message = message_temp;
-                new_data = 1;
-            }
-
-            if(new_data == 1)
+            if(recvfrom(command, &message, sizeof(message), 0, (struct sockaddr*)&sock, &longaddr) > 0)
             {
                 SetJointPos(clientID, message.q);
 

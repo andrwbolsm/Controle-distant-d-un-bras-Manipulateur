@@ -57,17 +57,20 @@ int main (int nba, char *arg[])
     struct sockaddr_in sockAddr, sock;
     struct timespec t_send, t_recv;
 
-    float w=2*M_PI/2.5;
+    float w= 2*M_PI / 2.5;
     float dt = 0.01;
+    float t = 0;
 
     int systeme, longaddr , results, resultr;
-    long long time_init = 0;
+
+    long long send_us = 0;
     long long recv_us = 0;
+    long long latency = 0;
 
     systeme=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
-    sock.sin_family=PF_INET;
-    sock.sin_port=htons(2000); 
-    sock.sin_addr.s_addr=inet_addr("127.0.0.1");
+    sock.sin_family = PF_INET;
+    sock.sin_port = htons(2000); 
+    sock.sin_addr.s_addr = inet_addr("127.0.0.1");
     longaddr=sizeof(sock);
 
     for (int i=0; i < 6;i++) message.q[i] = 0.0;
@@ -82,10 +85,6 @@ int main (int nba, char *arg[])
     }
     fprintf(logfile, "t_in,t_rcv,latence_us,q0_in,q0_rcv\n");
 
-    
-    clock_gettime(CLOCK_MONOTONIC, &t_send);
-    time_init = time_in_us(&t_send);
-
     while (1) 
     {   
         // --- Keyboard Logic ---
@@ -96,27 +95,24 @@ int main (int nba, char *arg[])
         //     if (c == 'q') break;               // Quit
         // }
 
-        clock_gettime(CLOCK_MONOTONIC, &t_send);
-
-        t_send = time_in_us(&t_send);
-        //message.q[0] = 0.5*sin((recv_us - time_init)/(1000*1000*1.0) * w);
-        message.q[0] = (t_send - time_init)/(1000*1000*1.0);
-
+        message.q[0] = 0.5*sin(t * w);
         printf("q[0] = %f\n", message.q[0]);
 
         results = sendto(systeme, &message, sizeof(message), 0,
                         (struct sockaddr*)&sock, sizeof(sock));
+
+        clock_gettime(CLOCK_MONOTONIC, &t_send);
 
         resultr = recvfrom(systeme, &message, sizeof(message), 0,
                         (struct sockaddr*)&sock, &longaddr);
               
         clock_gettime(CLOCK_MONOTONIC, &t_recv);
 
-        if (resultr > 0) 
+        if(resultr > 0)
         {
-            long long send_us = time_in_us(&t_send);
-            long long recv_us = time_in_us(&t_recv);
-            long long latency = recv_us - send_us;
+            send_us = time_in_us(&t_send);
+            recv_us = time_in_us(&t_recv);
+            latency = recv_us - send_us;
 
             fprintf(logfile, "%lld,%lld,%lld,%f,%f\n",
                     send_us,
@@ -124,10 +120,11 @@ int main (int nba, char *arg[])
                     latency,
                     message.q[0],     // valor enviado
                     message.qr[0]);   // valor recebido
-
-            fflush(logfile);
         }
         
+        //fflush(logfile);
+
+        t += dt;
         usleep(dt*1000*1000);
     }
 
