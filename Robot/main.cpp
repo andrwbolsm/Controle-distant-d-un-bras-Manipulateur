@@ -18,6 +18,8 @@
 #include <netdb.h>
 #include <fcntl.h>
 
+#include <time.h>
+
 using namespace std;
 
 extern "C" {
@@ -28,11 +30,16 @@ extern "C" {
 struct mesg 
 {
   float q[6];
-  float qr[6];
+  long long time;
 };
 
 int handles[6],all_ok=1;
 simxInt handle, error;
+
+long long time_in_us(struct timespec *ts) 
+{
+    return (long long)ts->tv_sec * 1000000LL + ts->tv_nsec / 1000;
+}
 
 void GetHandles(int clientID)
 {
@@ -101,11 +108,22 @@ void GetJointPos(int clientID,  float *q){
     }
 }
 
+void SetJointVel(int clientID,  float *q){
+        for (int i=0; i < 6; i++)
+            simxSetJointTargetVelocity(clientID, handles[i], q[i], simx_opmode_oneshot);
+}
+
+void GetJointVel(int clientID,  float *q){
+        for (int i=0; i < 6; i++)
+            simxGetObjectFloatParameter(clientID, handles[i], sim_jointfloatparam_velocity, &q[i], simx_opmode_oneshot);
+}
+
 
 int main(int argc,char* argv[])
 {
-    struct mesg message;
+    struct mesg message, message_feedback;
     struct sockaddr_in sock;
+    struct timespec time_step;
     socklen_t longaddr;
 
     long int Te = 10 * 1000;
@@ -137,7 +155,10 @@ int main(int argc,char* argv[])
 
     GetHandles(clientID);
 
-    for (int i=0; i < 6;i++)message.q[i] = 0.0;
+    for (int i=0; i < 6; i++) message.q[i] = 0.0;
+    for (int i=0; i < 6; i++) message_feedback.q[i] = 0.0;
+    message.time = 0;
+    message_feedback.time = 0;
 
     if (clientID != -1)
     {
@@ -150,19 +171,15 @@ int main(int argc,char* argv[])
        {
             if(recvfrom(command, &message, sizeof(message), 0, (struct sockaddr*)&sock, &longaddr) > 0)
             {
-                SetJointPos(clientID, message.q);
+                //clock_gettime(CLOCK_MONOTONIC, &time_step);
+                //message_feedback.time = time_in_us(&time_step);
+                message_feedback.time = message.time;
+                SetJointVel(clientID, message.q);
+                GetJointVel(clientID, message_feedback.q);
 
-                // Faire avancer la simulation d'un pas
-                simxSynchronousTrigger(clientID);
+                results=sendto(command,&message_feedback,sizeof(message_feedback),0,(struct sockaddr*)&sock,sizeof(sock));
 
-                // Attendre que le pas soit calculé par Coppelia pour avoir des données fraîches
-                simxGetPingTime(clientID, &error);
-
-                GetJointPos(clientID, message.qr);
-
-                results=sendto(command,&message,sizeof(message),0,(struct sockaddr*)&sock,sizeof(sock));
-
-                printf("q : %f\nqr : %f\n", message.q[0], message.qr[0]);
+                //printf("q : %f\nqr : %f\n", message.q[0], message_feedback.q[0]);
             }
         }
 

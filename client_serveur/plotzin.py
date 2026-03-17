@@ -29,7 +29,12 @@ plt.close(fig1) # Ferme la figure pour libérer la mémoire RAM
 # ==============================
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 ax2.plot(df["tempo_envio_s"], df["q0_in"], 'r--', label="Envoyé (q0_in)", alpha=0.8)
-ax2.plot(df["tempo_envio_s"], df["q0_rcv"], 'g-', label="Reçu (q0_rcv)", linewidth=1)
+ax2.scatter(df["tempo_envio_s"], df["q0_rcv"], 
+            color='green', 
+            label="Reçu (q0_rcv)", 
+            s=10,         # Size of the dots
+            alpha=0.6,    # Transparency (useful if points overlap)
+            marker='o')   # Shape of the points
 ax2.set_xlabel("Temps (s)")
 ax2.set_ylabel("Valeur q[0]")
 ax2.set_title("Comparaison : Données Envoyées vs Reçues")

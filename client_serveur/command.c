@@ -16,7 +16,7 @@
 struct mesg 
 {
   float q[6];
-  float qr[6];
+  long long time;
 };
 
 #define ERROR (-1)
@@ -53,9 +53,9 @@ int kbhit(void) {
 
 int main (int nba, char *arg[]) 
 {
-    struct mesg message;
+    struct mesg message, message_feedback;
     struct sockaddr_in sockAddr, sock;
-    struct timespec t_send, t_recv;
+    struct timespec time_step, time_recv;
 
     float w= 2*M_PI / 2.5;
     float dt = 0.01;
@@ -63,8 +63,6 @@ int main (int nba, char *arg[])
 
     int systeme, longaddr , results, resultr;
 
-    long long send_us = 0;
-    long long recv_us = 0;
     long long latency = 0;
 
     systeme=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
@@ -74,6 +72,10 @@ int main (int nba, char *arg[])
     longaddr=sizeof(sock);
 
     for (int i=0; i < 6;i++) message.q[i] = 0.0;
+    for (int i=0; i < 6;i++) message_feedback.q[i] = 0.0;
+
+    message.time = 0;
+    message_feedback.time = 0;
 
     fcntl(systeme,F_SETFL,fcntl(systeme,F_GETFL) | O_NONBLOCK);
     
@@ -87,42 +89,59 @@ int main (int nba, char *arg[])
 
     while (1) 
     {   
-        // --- Keyboard Logic ---
+        //--- Keyboard Logic ---
         // if (kbhit()) {
         //     char c = getchar();
-        //     if (c == 'u') message.q[0] += 0.1; // Increase
-        //     if (c == 'd') message.q[0] -= 0.1; // Decrease
-        //     if (c == 'q') break;               // Quit
+        //     if (c == 'q') message.q[0] += 0.1; // Increase
+        //     if (c == 'a') message.q[0] -= 0.1; // Decrease
+        //     if (c == 'w') message.q[1] += 0.1; // Increase
+        //     if (c == 's') message.q[1] -= 0.1; // Decrease
+        //     if (c == 'e') message.q[2] += 0.1; // Increase
+        //     if (c == 'd') message.q[2] -= 0.1; // Decrease
+        //     if (c == 'r') message.q[3] += 0.1; // Increase
+        //     if (c == 'f') message.q[3] -= 0.1; // Decrease
+        //     if (c == 't') message.q[4] += 0.1; // Increase
+        //     if (c == 'g') message.q[4] -= 0.1; // Decrease
+        //     if (c == 'y') message.q[5] += 0.1; // Increase
+        //     if (c == 'h') message.q[5] -= 0.1; // Decrease
+        //     if (c == 'z') break;               // Quit
         // }
 
-        message.q[0] = 0.5*sin(t * w);
-        printf("q[0] = %f\n", message.q[0]);
+        //message.q[0] = 0.5*sin(t * w);
+
+        message.q[0] = -4;
+        
+        //for (int i=0; i < 6;i++) message.q[i] = -1.0;
+
+        for (int i=0; i < 6;i++) printf("q[%d] = %f; ", i, message.q[i]);
+        printf("\n");
+        for (int i=0; i < 6;i++) printf("q[%d] = %f; ", i, message_feedback.q[i]);
+        printf("\n");
+
+        clock_gettime(CLOCK_MONOTONIC, &time_step);
+        message.time = time_in_us(&time_step);
 
         results = sendto(systeme, &message, sizeof(message), 0,
                         (struct sockaddr*)&sock, sizeof(sock));
 
-        clock_gettime(CLOCK_MONOTONIC, &t_send);
-
-        resultr = recvfrom(systeme, &message, sizeof(message), 0,
+        resultr = recvfrom(systeme, &message_feedback, sizeof(message_feedback), 0,
                         (struct sockaddr*)&sock, &longaddr);
-              
-        clock_gettime(CLOCK_MONOTONIC, &t_recv);
 
-        if(resultr > 0)
-        {
-            send_us = time_in_us(&t_send);
-            recv_us = time_in_us(&t_recv);
-            latency = recv_us - send_us;
+        clock_gettime(CLOCK_MONOTONIC, &time_recv);
+        long long time_recv_us = time_in_us(&time_recv);
 
+        latency = time_recv_us - message_feedback.time;
+
+        if (message_feedback.time) {
             fprintf(logfile, "%lld,%lld,%lld,%f,%f\n",
-                    send_us,
-                    recv_us,
+                    message.time,
+                    time_recv_us,
                     latency,
                     message.q[0],     // valor enviado
-                    message.qr[0]);   // valor recebido
+                    message_feedback.q[0]);   // valor recebido
+            
+            fflush(logfile);
         }
-        
-        //fflush(logfile);
 
         t += dt;
         usleep(dt*1000*1000);
