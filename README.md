@@ -1,8 +1,4 @@
 # Contrôle Distant d'un Bras Manipulateur
-
-Remote velocity control of a 6-DOF Robotis arm over a simulated UDP/IP network.  
-MEA4 — Polytech'Montpellier
-
 ---
 
 ## How it works
