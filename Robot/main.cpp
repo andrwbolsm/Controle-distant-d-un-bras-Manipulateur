@@ -118,7 +118,6 @@ void GetJointVel(int clientID,  float *q){
             simxGetObjectFloatParameter(clientID, handles[i], sim_jointfloatparam_velocity, &q[i], simx_opmode_oneshot);
 }
 
-
 int main(int argc,char* argv[])
 {
     struct mesg message, message_feedback;
@@ -136,7 +135,7 @@ int main(int argc,char* argv[])
 
     command=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
         sock.sin_family=PF_INET;
-        sock.sin_port=htons(2001); 
+        sock.sin_port=htons(2001); //2001
         sock.sin_addr.s_addr=0;
     longaddr=sizeof(sock);
 
@@ -172,14 +171,14 @@ int main(int argc,char* argv[])
             if(recvfrom(command, &message, sizeof(message), 0, (struct sockaddr*)&sock, &longaddr) > 0)
             {
                 //clock_gettime(CLOCK_MONOTONIC, &time_step);
-                //message_feedback.time = time_in_us(&time_step);
                 message_feedback.time = message.time;
                 SetJointVel(clientID, message.q);
-                GetJointVel(clientID, message_feedback.q);
+                //GetJointVel(clientID, message_feedback.q);
+                GetJointPos(clientID, message_feedback.q);
 
-                results=sendto(command,&message_feedback,sizeof(message_feedback),0,(struct sockaddr*)&sock,sizeof(sock));
+                results=sendto(command,&message_feedback,sizeof(message_feedback), 0, (struct sockaddr*)&sock,sizeof(sock));
 
-                //printf("q : %f\nqr : %f\n", message.q[0], message_feedback.q[0]);
+                printf("q : %f\nqr : %f\n", message.q[0], message_feedback.q[0]);
             }
         }
 

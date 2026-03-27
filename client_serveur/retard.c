@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <math.h>
 
 struct mesg 
 {
@@ -16,7 +17,7 @@ struct mesg
 };
 
 #define ERROR (-1)
-#define SIZE_BUFFER 500
+#define SIZE_BUFFER 1000
 
 int main (int nba, char *arg[]) 
 {
@@ -33,10 +34,10 @@ int main (int nba, char *arg[])
     int cnt_comm_read = 0;
     int cnt_sys_read = 0;
     int cnt_time = 0;
+    double t = 0;
 
+    double dt = 0.005;
     int max_msg = 25;
-    int dt = 0.01;
-
     long int  Tr;  
 
     command=socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
@@ -62,10 +63,11 @@ int main (int nba, char *arg[])
 
     last_result = -1;
 
-    Tr = 100 * 1000;
+    for (int i=0; i < 6;i++){
+        message.q[i] = 0.0;
+        message_feedback.q[i] = 0.0;
+    } 
 
-    for (int i=0; i < 6;i++) message.q[i] = 0.0;
-    for (int i=0; i < 6;i++) message_feedback.q[i] = 0.0;
     message.time = 0;
     message_feedback.time = 0;
 
@@ -73,7 +75,7 @@ int main (int nba, char *arg[])
     fcntl(systeme,F_SETFL,fcntl(command,F_GETFL) | O_NONBLOCK);
 
     while (1) 
-    {
+    {        
         resultr = recvfrom(command, &message, sizeof(struct mesg), 0, (struct sockaddr*)&sock, &longaddr);
 
         if(resultr > 0)
@@ -120,8 +122,6 @@ int main (int nba, char *arg[])
 
             int diff_sys = cnt_sys_write - cnt_sys_read;
 
-            //printf("diff_sys : %d\n", diff_sys);
-
             if (diff_sys >= max_msg || (diff_sys <= 0 && cnt_sys_write != 0)) {
                 if (buffer_sys[cnt_sys_read]) {
                     //printf("qr[0] = %f\n", message.q[0]);
@@ -142,7 +142,21 @@ int main (int nba, char *arg[])
         cnt_sys_write %= max_msg;
 
         cnt_time++;
-        usleep(dt * 1000 * 1000);
+        t += dt;
+
+        if((int)t != 0 && (int)t % 10 == 0){
+            max_msg += 5;
+            printf("max msg = %d\n", max_msg);
+
+            if(max_msg >= 50){
+                max_msg = 10;
+            }
+
+            t = 0;
+        }
+
+        usleep(5 * 1000);
+
     }
 
     close(command);
